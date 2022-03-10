@@ -8,6 +8,7 @@ describe('WuWeiNFT', () => {
   let contract: WuWeiNFT;
   let owner: SignerWithAddress;
   let nonOwner: SignerWithAddress;
+  let newOwner: SignerWithAddress;
   let users: SignerWithAddress[];
   const MOCK_SUBSCRIPTION_ID = '0';
   const MOCK_LINK = constants.AddressZero;
@@ -37,7 +38,7 @@ describe('WuWeiNFT', () => {
 
   beforeEach(async () => {
     users = await ethers.getSigners();
-    [owner, nonOwner] = users;
+    [owner, nonOwner, newOwner] = users;
     contract = await deployContract();
   });
 
@@ -92,6 +93,50 @@ describe('WuWeiNFT', () => {
     it('Non owner should not be able to call', async () => {
       await expect(contract.connect(nonOwner).createCollectible()).to.be
         .reverted;
+    });
+  });
+
+  // function transferFrom(
+  //   address from,
+  //   address to,
+  //   uint256 tokenId
+  // ) public override(ERC721) {
+  //   uint256 requestId = COORDINATOR.requestRandomWords(
+  //     keyHash,
+  //     s_subscriptionId,
+  //     requestConfirmations,
+  //     callbackGasLimit,
+  //     numWords
+  //   );
+  //   requestIdToTokenId[requestId] = tokenId;
+  //   _transfer(from, to, tokenId);
+  // }
+  describe('transferFrom', () => {
+    it('Check new ownership after transfer', async () => {
+      await contract.connect(owner).createCollectible();
+      const tokenId = 0;
+      await contract.transferFrom(owner.address, newOwner.address, tokenId);
+
+      expect(await contract.ownerOf(tokenId)).equal(newOwner.address);
+    });
+
+    it('Check if the URI and Eigenvalue change', async () => {
+      let egv;
+      const tokenId = 0;
+      await contract.connect(owner).createCollectible();
+      let uri = await contract.tokenURI(tokenId);
+      console.log(uri);
+      egv = await contract.tokenIdToEigenValue(tokenId);
+      console.log(egv);
+
+      await contract.transferFrom(owner.address, newOwner.address, tokenId);
+      expect(await contract.ownerOf(tokenId)).equal(newOwner.address);
+
+      // Hopefully the URI and EigenValue changes!
+      uri = await contract.tokenURI(tokenId);
+      console.log(uri);
+      egv = await contract.tokenIdToEigenValue(tokenId);
+      console.log(egv);
     });
   });
 });
